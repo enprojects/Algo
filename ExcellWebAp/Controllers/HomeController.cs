@@ -10,6 +10,7 @@ using System.IO;
 using OfficeOpenXml.Style;
 using OfficeOpenXml.Table;
 using System.Drawing;
+using System.Text.RegularExpressions;
 
 namespace ExcellWebAp.Controllers
 {
@@ -34,7 +35,7 @@ namespace ExcellWebAp.Controllers
         public class Person
         {
 
-            public int Age { get; set; }
+            public decimal salery { get; set; }
             public string Name { get; set; }
             public string NoId { get; set; }
 
@@ -53,33 +54,33 @@ namespace ExcellWebAp.Controllers
             var test = $"{str}";
 
             var lst = new List<Person> {
-               new Person {  Age =50, Name ="name 1", NoId ="2"},
-                new Person {  Age =12, Name ="mohamad", NoId ="2"},
-               new Person {  Age =33, Name ="david", NoId ="1"},
-                new Person {  Age =53, Name ="moshe222222", NoId ="1"},
-                 new Person {  Age =33, Name ="david4444", NoId ="1"},
-                new Person {  Age =53, Name ="moshe", NoId ="1"}
+               new Person {  salery =50.99M, Name ="name 1", NoId ="2"},
+                new Person {  salery =300555.34M, Name ="mohamad", NoId ="2"},
+               new Person {  salery =76889.88M, Name ="david", NoId ="1"},
+                new Person {  salery =30000, Name ="moshe222222", NoId ="1"},
+                 new Person {  salery =33.88M, Name ="david4444", NoId ="1"},
+                new Person {  salery =53.90M, Name ="moshe", NoId ="1"}
 
            };
 
 
-            var grp = lst.GroupBy(x => x.NoId).ToDictionary(x => x.Key, x => x.ToList());
+            //var grp = lst.GroupBy(x => x.NoId).ToDictionary(x => x.Key, x => x.ToList());
              
-            foreach (var item in grp)
-            {
-                foreach (var p in item.Value)
-                {
+            //foreach (var item in grp)
+            //{
+            //    foreach (var p in item.Value)
+            //    {
                       
-                }
+            //    }
                  
-            }
-            //
-            var var1 = grp.SelectMany(x => x.Value);
+            //}
+            ////
+            //var var1 = grp.SelectMany(x => x.Value);
 
          
              
 
-            var bytes = ReturnExcell(lst, new List<string> { "Age", "Name", "NoId" });
+            var bytes = ReturnExcell(lst, new List<string> { "salery", "Name", "NoId" });
 
             return File(bytes, "application/vnd.ms-excel", "mytestfile.xlsx");
         }
@@ -91,13 +92,21 @@ namespace ExcellWebAp.Controllers
 
         private void SetCaption(ExcelWorksheet ws, int fromRow, int fromCol, int toRow, int toCcol)
         {
-            var title = ws.Cells[ fromRow,  fromCol,  toRow,  toCcol];
-            title.Merge = true;
-            title.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-            title.Value = "No chart to display";
+             var title = ws.Cells[ fromRow, fromCol];
+           title.Value = "No chart to display";
             title.Style.Font.Size = 16;
-            title.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            title.Style.Fill.BackgroundColor.SetColor(Color.Gray);
+
+
+            var mergeTitle = ws.Cells[fromRow, fromCol, toRow, toCcol];
+            mergeTitle.Merge = true;
+            mergeTitle.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+
+       
+            mergeTitle.Style.Fill.PatternType = ExcelFillStyle.Solid;
+            mergeTitle.Style.Fill.BackgroundColor.SetColor(Color.Gray);
+
+
+          
 
 
         }
@@ -135,13 +144,29 @@ namespace ExcellWebAp.Controllers
                 ws.Cells[row, col].Value = columns[i];
                 ws.Cells[row, col].Style.Font.Bold = true;
                 ws.Cells[row, col].Style.Font.Size = 18;
-             
+
+              
+
+
+
+
 
                 foreach (var item in lst)
                 {
                     var type = item.GetType();
                     var propInfo = type.GetProperties().Where(x => x.Name == columns[i]).FirstOrDefault();
-                    ws.Cells[++row, col].Value = propInfo.GetValue(item);
+                    var val  = propInfo.GetValue(item);
+                    var rng = ws.Cells[++row, col];
+                    rng.Value = val;
+
+                    Regex regex = new Regex(@"\d+");
+                    Match match = regex.Match(@"\d+(\.\d{1,2})?");
+                    if (match.Success)
+                    {
+                       rng.Style.Numberformat.Format = "#,##0.00";
+                    }
+
+
                 }
 
             }
@@ -154,10 +179,20 @@ namespace ExcellWebAp.Controllers
                 ExcelTable table = tblcollection.Add(Rng, "data");
                 table.ShowHeader = true;
                 table.ShowFilter = true;
-                table.TableStyle = TableStyles.Medium2;
+                //  table.TableStyle = TableStyles.Medium2;
+                ws.View.ShowGridLines = false;
                 Rng.AutoFitColumns();
+
                
-               
+                Rng.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                Rng.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                Rng.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                 Rng.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+
+
+                //var modelCells = ws.Cells[startFomRow, 1, lst.Count + startFomRow, columns.Count];
+                //var border = Rng.Style.Border.Top.Style = Rng.Style.Border.Left.Style = Rng.Style.Border.Right.Style = Rng.Style.Border.Bottom.Style = ExcelBorderStyle.Medium;
+
             }
             return pck.GetAsByteArray();
          
